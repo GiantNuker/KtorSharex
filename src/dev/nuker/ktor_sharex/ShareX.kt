@@ -34,7 +34,7 @@ import kotlin.random.Random
 object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
     var folder = File("sharex")
     var users = mutableListOf<ShareXUser>()
-    var filenameGen: () -> String = RandomNameGen
+    var filenameGen: () -> String = TimeNameGen
 
     override val key: AttributeKey<ShareX> = AttributeKey("ShareX")
 
@@ -48,6 +48,10 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
 
     object RandomNameGen: () -> String {
         override fun invoke(): String = Random.nextLong().toString(36).replace("-", "")
+    }
+
+    object TimeNameGen: () -> String {
+        override fun invoke(): String = System.currentTimeMillis().toString(36)
     }
 
     class ShareXUser(val username: String, val password: String)

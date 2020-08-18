@@ -1,6 +1,5 @@
 package dev.nuker
 
-import dev.nuker.dev.nuker.ktor_sharex.ShareXConfig
 import dev.nuker.ktor_sharex.ShareX
 import io.ktor.application.*
 import io.ktor.response.*
