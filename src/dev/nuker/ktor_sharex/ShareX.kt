@@ -59,7 +59,7 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
                 //val relativePath = call.parameters.getAll("static-content-path-parameter")?.joinToString(File.separator) ?: return@get
                 if (path != null && path.size in 1..2) {
                     when {
-                        path.size == 1 && File(path[0]).extension == "" -> {
+                        path.size == 1 && File(path[0]).extension == "" && links -> {
                             val file = File(ShareX.folder, "links").combineSafe(path[0].substringBeforeLast("."))
                             if (file.isFile) {
                                 callback?.invoke(call, path[0], if (path.size == 2) path[1] else path[0])
@@ -67,7 +67,7 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
                                 call.respondRedirect(link, false)
                             }
                         }
-                        else -> {
+                        uploads -> {
                             val file = File(ShareX.folder, "uploads").combineSafe(path[0].substringBeforeLast("."))
                             val interpFile = File(if (path.size == 2) path[1] else path[0])
                             if (file.isFile) {
@@ -90,7 +90,7 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
         }
     }
 
-    fun upload(route: Route, folder: String = "", uploads: Boolean = true, links: Boolean = true, callback: ((ApplicationCall, String) -> Unit)? = null) = route.apply {
+    fun upload(route: Route, folder: String = "", uploads: Boolean = true, links: Boolean = true) = route.apply {
         post(folder) {
             if (!this.call.parameters.contains("delete")) {
                 val multipart = this.call.receiveMultipart()
@@ -116,7 +116,7 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
                 }
                 if (users.any { it.username == username && it.password == password }) {
                     when {
-                        file == null && input != null -> { // url upload
+                        file == null && input != null && links -> { // url upload
                             val name = filenameGen()
                             val file = File(ShareX.folder, "links/$name")
                             file.outputStream().use {
@@ -125,7 +125,7 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
                             val delete = makeDeleteKey(name)
                             call.respondText("""{"view":"$name","delete":"$name?delete=$delete"}""")
                         }
-                        file != null -> {
+                        file != null && uploads -> {
                             val name = filenameGen()
                             val file2 = File(ShareX.folder, "uploads/$name")
                             stream!!().use { input ->
