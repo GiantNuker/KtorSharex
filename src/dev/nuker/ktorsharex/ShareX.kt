@@ -35,7 +35,7 @@ object ShareX : ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
     var folder = File("sharex")
     var users = mutableListOf<ShareXUser>()
     var filenameGen: () -> String = TimeNameGen
-    var urlGetter: (String, String) -> String = { sub, name -> error("no custom url generator defined") }
+    var urlGetter: (String, String) -> String = { sub, name -> "" }
 
     override val key: AttributeKey<ShareX> = AttributeKey("ShareX")
 
