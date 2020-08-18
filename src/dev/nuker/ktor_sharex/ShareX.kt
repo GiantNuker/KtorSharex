@@ -56,7 +56,6 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
         static(folder) {
             get("{static-content-path-parameter...}") {
                 val path = call.parameters.getAll("static-content-path-parameter")
-                println(path)
                 //val relativePath = call.parameters.getAll("static-content-path-parameter")?.joinToString(File.separator) ?: return@get
                 if (path != null && path.size in 1..2) {
                     when {
@@ -115,7 +114,6 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
                         }
                     }
                 }
-                println("$username -> $password")
                 if (users.any { it.username == username && it.password == password }) {
                     when {
                         file == null && input != null -> { // url upload
@@ -149,7 +147,6 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
             get("{static-content-path-parameter...}") {
                 val path = call.parameters.getAll("static-content-path-parameter")
                 if (path != null && path.size == 1 && call.parameters.contains("delete")) {
-                    println(call.parameters.toMap())
                     val key = call.parameters["delete"]
                     val file = File(ShareX.folder, "delete").combineSafe(path[0])
                     if (file.exists()) {
