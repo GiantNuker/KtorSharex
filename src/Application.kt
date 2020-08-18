@@ -13,13 +13,18 @@ fun Application.module(testing: Boolean = false) {
 
     install(ShareX) {
         users.add(ShareX.ShareXUser("foo", "bar"))
+        urlGetter = { sub, name -> "localhost/${
+        when (sub) {
+            "e1/" -> "endpoint1/"
+            else -> "endpoint2/"
+        }
+        }$name" }
     }
 
     routing {
-        ShareX.upload(this, "upload")
-        ShareX.host(this, "host")
-        ShareX.upload(this, "upload2", "2")
-        ShareX.host(this, "host2", "2")
+        ShareX.uploadPickSub(this, "upload", mapOf("endpoint 1" to "e1", "endpoint 2" to "e2"))
+        ShareX.host(this, "endpoint1", "e1")
+        ShareX.host(this, "endpoint2", "e2")
     }
 }
 
