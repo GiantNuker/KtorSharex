@@ -1,4 +1,4 @@
-package dev.nuker.ktor_sharex
+package dev.nuker.ktorsharex
 
 import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline
@@ -18,7 +18,6 @@ import io.ktor.routing.post
 import io.ktor.util.AttributeKey
 import io.ktor.util.cio.readChannel
 import io.ktor.util.combineSafe
-import io.ktor.util.toMap
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +26,6 @@ import kotlinx.coroutines.yield
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
-import java.nio.file.Files
 import java.util.*
 import kotlin.random.Random
 
@@ -56,15 +54,16 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
 
     class ShareXUser(val username: String, val password: String)
 
-    fun host(route: Route, folder: String = "", uploads: Boolean = true, links: Boolean = true, callback: ((ApplicationCall, String, String) -> Unit)? = null) = route.apply {
-        static(folder) {
+    fun host(route: Route, path: String = "", subfolder: String? = null, uploads: Boolean = true, links: Boolean = true, callback: ((ApplicationCall, String, String) -> Unit)? = null) = route.apply {
+        val subfolder = if (subfolder == null) "" else "$subfolder/"
+        static(path) {
             get("{static-content-path-parameter...}") {
                 val path = call.parameters.getAll("static-content-path-parameter")
                 //val relativePath = call.parameters.getAll("static-content-path-parameter")?.joinToString(File.separator) ?: return@get
                 if (path != null && path.size in 1..2) {
                     when {
                         path.size == 1 && File(path[0]).extension == "" && links -> {
-                            val file = File(ShareX.folder, "links").combineSafe(path[0].substringBeforeLast("."))
+                            val file = File(ShareX.folder, "${subfolder}links").combineSafe(path[0].substringBeforeLast("."))
                             if (file.isFile) {
                                 callback?.invoke(call, path[0], if (path.size == 2) path[1] else path[0])
                                 val link = String(file.inputStream().buffered().readBytes(), Charsets.UTF_8)
@@ -72,7 +71,7 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
                             }
                         }
                         uploads -> {
-                            val file = File(ShareX.folder, "uploads").combineSafe(path[0].substringBeforeLast("."))
+                            val file = File(ShareX.folder, "${subfolder}uploads").combineSafe(path[0].substringBeforeLast("."))
                             val interpFile = File(if (path.size == 2) path[1] else path[0])
                             if (file.isFile) {
                                 callback?.invoke(call, path[0], if (path.size == 2) path[1] else path[0])
@@ -94,8 +93,9 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
         }
     }
 
-    fun upload(route: Route, folder: String = "", uploads: Boolean = true, links: Boolean = true) = route.apply {
-        post(folder) {
+    fun upload(route: Route, path: String = "", subfolder: String? = null, uploads: Boolean = true, links: Boolean = true) = route.apply {
+        val subfolder = if (subfolder == null) "" else "$subfolder/"
+        post(path) {
             if (!this.call.parameters.contains("delete")) {
                 val multipart = this.call.receiveMultipart()
                 var username: String? = null
@@ -122,22 +122,24 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
                     when {
                         file == null && input != null && links -> { // url upload
                             val name = filenameGen()
-                            val file = File(ShareX.folder, "links/$name")
+                            val file = File(ShareX.folder, "${subfolder}links/$name")
+                            file.parentFile.mkdirs()
                             file.outputStream().use {
                                 it.write(input!!.toByteArray(Charsets.UTF_8))
                             }
-                            val delete = makeDeleteKey(name)
-                            call.respondText("""{"view":"$name","delete":"$name?delete=$delete"}""")
+                            val delete = makeDeleteKey(subfolder, name)
+                            call.respondText("""{"raw":"$name","view":"$name","delete":"$name?delete=$delete"}""")
                         }
                         file != null && uploads -> {
                             val name = filenameGen()
-                            val file2 = File(ShareX.folder, "uploads/$name")
+                            val file2 = File(ShareX.folder, "${subfolder}uploads/$name")
+                            file2.parentFile.mkdirs()
                             stream!!().use { input ->
                                 file2.outputStream().use {
                                     input.copyToSuspend(it)
                                 }
-                                val delete = makeDeleteKey(name)
-                                call.respondText("""{"view":"$name/${file!!.name.replace("\"", "\\\"")}","delete":"${file!!.name.replace("\"", "\\\"")}?delete=$delete"}""")
+                                val delete = makeDeleteKey(subfolder, name)
+                                call.respondText("""{"raw":"$name","view":"$name/${file!!.name.replace("\"", "\\\"")}","delete":"$name?delete=$delete"}""")
                             }
                         }
                         else -> call.respond(HttpStatusCode.BadRequest)
@@ -147,18 +149,18 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
                 }
             }
         }
-        static(folder) {
+        static(path) {
             get("{static-content-path-parameter...}") {
                 val path = call.parameters.getAll("static-content-path-parameter")
                 if (path != null && path.size == 1 && call.parameters.contains("delete")) {
                     val key = call.parameters["delete"]
-                    val file = File(ShareX.folder, "delete").combineSafe(path[0])
+                    val file = File(ShareX.folder, "${subfolder}delete").combineSafe(path[0])
                     if (file.exists()) {
                         val realkey = String(file.inputStream().buffered().readBytes(), Charsets.UTF_8)
                         if (realkey == key) {
                             file.delete()
-                            File(ShareX.folder, "links").combineSafe(path[0]).also { if (it.exists()) it.delete() }
-                            File(ShareX.folder, "uploads").combineSafe(path[0]).also { if (it.exists()) it.delete() }
+                            File(ShareX.folder, "${subfolder}links").combineSafe(path[0]).also { if (it.exists()) it.delete() }
+                            File(ShareX.folder, "${subfolder}uploads").combineSafe(path[0]).also { if (it.exists()) it.delete() }
                             call.respondText("Deleted")
                         } else {
                             call.respond(HttpStatusCode.Unauthorized)
@@ -173,8 +175,9 @@ object ShareX: ApplicationFeature<ApplicationCallPipeline, ShareX, ShareX> {
         }
     }
 
-    private fun makeDeleteKey(name: String): String {
-        val file = File(ShareX.folder, "delete/$name")
+    private fun makeDeleteKey(subfolder: String, name: String): String {
+        val file = File(ShareX.folder, "${subfolder}delete/$name")
+        file.parentFile.mkdirs()
         var key = ""
         for (i in 0 until 5) {
             key += UUID.randomUUID().toString().replace("-", "")

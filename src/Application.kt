@@ -1,11 +1,9 @@
 package dev.nuker
 
-import dev.nuker.ktor_sharex.ShareX
-import io.ktor.application.*
-import io.ktor.response.*
-import io.ktor.request.*
-import io.ktor.routing.*
-import io.ktor.http.*
+import dev.nuker.ktorsharex.ShareX
+import io.ktor.application.Application
+import io.ktor.application.install
+import io.ktor.routing.routing
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -20,6 +18,8 @@ fun Application.module(testing: Boolean = false) {
     routing {
         ShareX.upload(this, "upload")
         ShareX.host(this, "host")
+        ShareX.upload(this, "upload2", "2")
+        ShareX.host(this, "host2", "2")
     }
 }
 
